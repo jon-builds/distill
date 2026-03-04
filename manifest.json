@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Distill",
-  "version": "4.2.0",
+  "name": "Distill: YouTube AI Summaries & Chat — Direct API, No Servers",
+  "version": "4.2.1",
   "description": "Distill YouTube videos into transcripts, AI summaries, and conversational chat",
   "permissions": [
     "activeTab",

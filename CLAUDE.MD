@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.2.0
-**Branch Strategy:** `main` is the stable branch (contains v4.2.0). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.2.1
+**Branch Strategy:** `main` is the stable branch (contains v4.2.1). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -462,7 +462,10 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.2.0** (2026-03-04) - Current
+**v4.2.1** (2026-03-04) - Current
+- Extension name updated to "Distill: YouTube AI Summaries & Chat — Direct API, No Servers" for Chrome Web Store discoverability
+
+**v4.2.0** (2026-03-04)
 - **Dynamic Claude Model List**: Fetched live from `/v1/models` API instead of hardcoded
   - Falls back to curated list when API key is missing or endpoint fails
   - Removed deprecated Claude 3.x models from fallback list
@@ -554,7 +557,7 @@ Manual testing required (no automated tests). Key areas to verify:
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.2.0). Default branch on GitHub.
+- `main` - Stable branch (contains v4.2.1). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -590,4 +593,4 @@ Manual testing required (no automated tests). Key areas to verify:
 ---
 
 **Last Updated:** 2026-03-04
-**Current Version:** 4.2.0
+**Current Version:** 4.2.1
