@@ -5,6 +5,11 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2026-03-04
+
+### Changed
+- Extension name updated to "Distill: YouTube AI Summaries & Chat — Direct API, No Servers" for better Chrome Web Store discoverability
+
 ## [4.2.0] - 2026-03-04
 
 ### Changed
