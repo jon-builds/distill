@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.1.0
-**Branch Strategy:** `main` is the stable branch (contains v4.1.0). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.2.0
+**Branch Strategy:** `main` is the stable branch (contains v4.2.0). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -181,7 +181,7 @@ Acts as a CORS bypass proxy for API calls. Implements:
   - Includes all GPT, O1, and ChatGPT variants
   - Returns models with friendly labels and priority sorting
   - Logs discovered models to console for debugging
-- `fetchClaudeModels(apiKey)` - Validates Claude API key with test request, returns hardcoded model list
+- `fetchClaudeModels(apiKey)` - Fetches models dynamically from `/v1/models` endpoint, falls back to hardcoded list
 - `callOpenAI(apiKey, model, prompt, transcript)` - Calls OpenAI chat completions with dynamic parameters
   - Uses `max_completion_tokens` for O1/GPT-4o models, `max_tokens` for legacy models
   - Includes `temperature: 0.7` for non-O1 models, excludes it for O1 models
@@ -246,17 +246,7 @@ if (!forceRefresh && cachedModels[provider]) {
 When user enters API key and moves to next field, automatically fetches available models.
 
 **Claude Model List:**
-Hardcoded in background.js only (settings.js delegates via message passing). Claude doesn't expose a public models endpoint.
-
-Current models (as of v4.0.0):
-- claude-opus-4-6 (Latest)
-- claude-opus-4-5-20251101
-- claude-sonnet-4-5-20250929
-- claude-haiku-4-5-20251001
-- claude-3-7-sonnet-20250219
-- claude-3-5-sonnet-20241022/20240620
-- claude-3-5-haiku-20241022
-- claude-3-opus/sonnet/haiku-202402xx
+Fetched dynamically from Anthropic's `/v1/models` endpoint (v4.2.0+). Falls back to a hardcoded list in background.js when the API key is missing or the endpoint fails. Settings.js delegates model fetching via message passing to background.js.
 
 ### constants.js (Shared Constants)
 
@@ -264,7 +254,7 @@ Defines `YTE_CONSTANTS` object with:
 - **Timing values:** `TOAST_DURATION`, `MUTATION_TIMEOUT`, `ERROR_RESET_DELAY`, etc.
 - **Cache limits:** `MAX_CACHED_VIDEOS` (10), `MAX_CHAT_MESSAGES` (20)
 - **API defaults:** `DEFAULT_MAX_TOKENS_OPENAI` (4000), `NANO_MAX_TOKENS` (16384), `CHAT_CONTEXT_CHAR_LIMIT` (4000)
-- **Retry settings:** `MAX_RETRIES` (2), `RETRY_DELAYS`, `RETRYABLE_STATUS_CODES`
+- **Retry settings:** `MAX_RETRIES` (2), `RETRY_DELAYS`, `RETRYABLE_STATUS_CODES` (429, 500, 502, 503, 529)
 - **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
 
 Loaded first in manifest (before `utils.js`). Object is frozen to prevent mutation.
@@ -472,7 +462,14 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.1.0** (2026-02-27) - Current
+**v4.2.0** (2026-03-04) - Current
+- **Dynamic Claude Model List**: Fetched live from `/v1/models` API instead of hardcoded
+  - Falls back to curated list when API key is missing or endpoint fails
+  - Removed deprecated Claude 3.x models from fallback list
+  - Added Claude Sonnet 4.6, Sonnet 4, Opus 4 to fallback list
+- **529 Overloaded Retry**: Added HTTP 529 to retryable status codes in both `constants.js` and `background.js`
+
+**v4.1.0** (2026-02-27)
 - **Per-Provider API Key Storage**: Both OpenAI and Claude API keys now persist independently
   - Switching providers no longer overwrites the previous key
   - New storage keys: `openaiApiKey`, `claudeApiKey` alongside legacy `apiKey` for backward compat
@@ -531,7 +528,7 @@ Manual testing required (no automated tests). Key areas to verify:
 4. **FAB desktop only:** Floating button only appears on desktop (viewport > 768px)
 5. **Cache size limit:** Only 10 most recent videos cached (LRU eviction)
 6. **Cache not synced:** Cache uses `chrome.storage.local` and doesn't sync across devices
-7. **Claude Model List Hardcoded:** No public API endpoint, must update manually when new models release
+7. **Claude Model List Fallback:** Dynamic fetching from `/v1/models` requires a valid API key; without one, the hardcoded fallback list is used
 8. **Token Limits:** OpenAI max_tokens=4000 (GPT-5-nano: 16384 for reasoning headroom), Claude max_tokens=4096
 9. **Modal z-index conflicts:** Modal uses z-index 999999, FAB uses 999998
 10. **Chat context limited:** Chat uses summary (not full transcript) as context to manage tokens. Max 20 messages per video.
@@ -557,7 +554,7 @@ Manual testing required (no automated tests). Key areas to verify:
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.1.0). Default branch on GitHub.
+- `main` - Stable branch (contains v4.2.0). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -592,5 +589,5 @@ Manual testing required (no automated tests). Key areas to verify:
 
 ---
 
-**Last Updated:** 2026-02-27
-**Current Version:** 4.1.0
+**Last Updated:** 2026-03-04
+**Current Version:** 4.2.0

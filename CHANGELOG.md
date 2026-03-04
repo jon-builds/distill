@@ -5,6 +5,17 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-03-04
+
+### Changed
+- Claude model list now fetched dynamically from `/v1/models` API endpoint instead of hardcoded
+- Hardcoded list kept as fallback when API key is missing or endpoint fails
+- Removed deprecated Claude models (3.5 Haiku, 3.5 Sonnet v1/v2, 3.7 Sonnet, 3 Opus/Sonnet/Haiku)
+- Added Claude Sonnet 4.6, Sonnet 4, and Opus 4 to fallback list
+
+### Fixed
+- Added HTTP 529 (Anthropic overloaded) to retryable status codes in both `constants.js` and `background.js`
+
 ## [4.1.0] - 2026-02-27
 
 ### Added
