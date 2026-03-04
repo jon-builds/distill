@@ -23,7 +23,7 @@ const YTE_CONSTANTS = {
   // Retry settings
   MAX_RETRIES: 2,
   RETRY_DELAYS: [1000, 2000],
-  RETRYABLE_STATUS_CODES: [429, 500, 502, 503],
+  RETRYABLE_STATUS_CODES: [429, 500, 502, 503, 529],
 
   // YouTube DOM selectors
   SELECTORS: {

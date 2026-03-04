@@ -189,49 +189,52 @@ async function fetchOpenAIModels(apiKey) {
 }
 
 async function fetchClaudeModels(apiKey) {
-  const defaultModels = [
+  const fallbackModels = [
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (Latest)' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Latest)' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
     { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
     { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-    { value: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet v2' },
-    { value: 'claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet v1' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-    { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' }
   ];
 
   if (!apiKey || apiKey.trim() === '') {
-    return { success: true, models: defaultModels };
+    return { success: true, models: fallbackModels };
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    const response = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'test' }]
-      })
+        'anthropic-version': '2023-06-01'
+      }
     });
 
-    if (response.ok || response.status === 400) {
-      return { success: true, models: defaultModels };
-    } else if (response.status === 401) {
+    if (response.status === 401) {
       return { success: false, models: null, error: 'Invalid API key' };
-    } else {
-      return { success: true, models: defaultModels };
     }
+
+    if (!response.ok) {
+      console.warn('[Claude API] Models endpoint failed, using fallback list');
+      return { success: true, models: fallbackModels };
+    }
+
+    const data = await response.json();
+    const models = data.data
+      .filter(m => m.id.startsWith('claude-'))
+      .map(m => ({ value: m.id, label: m.display_name }));
+
+    if (models.length === 0) {
+      return { success: true, models: fallbackModels };
+    }
+
+    console.log('[Claude API] Fetched models:', models.map(m => m.value));
+    return { success: true, models };
   } catch (error) {
-    return { success: true, models: defaultModels };
+    console.warn('[Claude API] Models fetch error, using fallback list:', error.message);
+    return { success: true, models: fallbackModels };
   }
 }
 
@@ -314,7 +317,7 @@ function _buildOpenAIRequestBody(model, messages, options = {}) {
  * @returns {Promise<Response>} - Fetch response
  */
 async function fetchWithRetry(url, fetchOptions, maxRetries = 2, retryDelays = [1000, 2000]) {
-  const retryableStatusCodes = [429, 500, 502, 503];
+  const retryableStatusCodes = [429, 500, 502, 503, 529];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch(url, fetchOptions);

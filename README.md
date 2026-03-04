@@ -2,14 +2,16 @@
 
 A Chrome extension that distills YouTube videos into transcripts, AI summaries, and conversational chat — powered by OpenAI or Claude.
 
-**Current Version:** 4.1.0
+**Current Version:** 4.2.0
 
-## What's New in v4.1.0
+## What's New in v4.2.0
 
-- **Per-Provider API Key Storage** - Both OpenAI and Claude API keys now persist independently. Switching providers no longer overwrites the previous key. Automatic one-time migration from legacy storage on settings load.
-- **Default Prompt for New Users** - Pre-fills a concise summary prompt template with Key Takeaways, Breakdown (up to 5 major topics), and Notable Details with timestamps. Existing users keep their saved custom prompt.
+- **Dynamic Claude Model List** - Claude models are now fetched live from the `/v1/models` API endpoint. No more manual updates when Anthropic releases new models. Falls back to a curated list if the API is unavailable.
+- **529 Overloaded Retry** - Anthropic's "overloaded" (HTTP 529) errors are now automatically retried instead of immediately failing.
 
 ## Previous Releases
+
+**v4.1.0** - Per-provider API key storage, default prompt for new users
 
 **v4.0.3** - FAB inline SVG icon (CSP fix), compact minimized pill, settings save feedback
 
