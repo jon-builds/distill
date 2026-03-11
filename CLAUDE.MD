@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.3.0
-**Branch Strategy:** `main` is the stable branch (contains v4.3.0). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.3.2
+**Branch Strategy:** `main` is the stable branch (contains v4.3.2). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -201,11 +201,17 @@ All functions use `fetch()` with proper authentication headers. Streaming uses `
 Extracts transcripts from YouTube's DOM:
 
 1. Checks if transcript panel is open
-2. If not, clicks "More actions" button → "Show transcript" menu item
+2. If not, clicks "More actions" button → "Show transcript" menu item (tracks `weOpenedPanel` flag)
 3. Uses MutationObserver (`waitForElement()`) to detect DOM changes, with fixed-delay fallbacks
-4. Queries transcript segments via `YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS`
-5. Extracts timestamp and text from each segment using constant selector arrays
-6. Formats as `[timestamp] text` per line
+4. Scrolls through transcript container to load all virtualized segments (`scrollToLoadAllSegments()`)
+5. Queries transcript segments via `YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS`
+6. Extracts timestamp and text from each segment using constant selector arrays
+7. Formats as `[timestamp] text` per line
+8. If Distill opened the panel, auto-closes it via `TRANSCRIPT_PANEL_CLOSE` selectors
+
+**Scroll-to-load helpers:**
+- `findScrollableParent(element)` — Walks up DOM to find nearest scrollable ancestor
+- `scrollToLoadAllSegments(container, segmentSelector)` — Scrolls container in viewport-height increments, waits `SCROLL_STEP_DELAY` ms between steps, exits after 2 consecutive stable segment counts or `SCROLL_MAX_ITERATIONS`
 
 **Multiple selector fallbacks** for YouTube UI resilience:
 ```javascript
@@ -252,10 +258,11 @@ Fetched dynamically from Anthropic's `/v1/models` endpoint (v4.2.0+). Falls back
 
 Defines `YTE_CONSTANTS` object with:
 - **Timing values:** `TOAST_DURATION`, `MUTATION_TIMEOUT`, `ERROR_RESET_DELAY`, etc.
+- **Scroll-to-load:** `SCROLL_STEP_DELAY` (150ms), `SCROLL_MAX_ITERATIONS` (100)
 - **Cache limits:** `MAX_CACHED_VIDEOS` (10), `MAX_CHAT_MESSAGES` (20)
 - **API defaults:** `DEFAULT_MAX_TOKENS_OPENAI` (4000), `NANO_MAX_TOKENS` (16384), `CHAT_CONTEXT_CHAR_LIMIT` (4000)
 - **Retry settings:** `MAX_RETRIES` (2), `RETRY_DELAYS`, `RETRYABLE_STATUS_CODES` (429, 500, 502, 503, 529)
-- **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
+- **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.TRANSCRIPT_CONTAINER[]`, `SELECTORS.TRANSCRIPT_PANEL_CLOSE[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
 
 Loaded first in manifest (before `utils.js`). Object is frozen to prevent mutation.
 
@@ -462,7 +469,21 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.3.0** (2026-03-11) - Current
+**v4.3.2** (2026-03-11) - Current
+- **Scroll-to-load fix for panel open**: Added 500ms settle delay after Distill opens transcript panel, fixing extraction returning only ~4-5 segments
+- **Broader TRANSCRIPT_CONTAINER selectors**: Added `ytd-engagement-panel-section-list-renderer` selectors for YouTube's engagement panel DOM
+- **Diagnostic logging**: `[Distill]`-prefixed console logs at key extraction decision points
+
+**v4.3.1** (2026-03-11)
+- **Full Transcript Extraction**: Scroll-to-load logic handles YouTube's virtual scrolling, extracting all segments instead of ~10-20
+  - `scrollToLoadAllSegments()` scrolls through transcript container to force all segments into the DOM
+  - `findScrollableParent()` walks up DOM to find scrollable ancestor as fallback
+  - New constants: `SCROLL_STEP_DELAY` (150ms), `SCROLL_MAX_ITERATIONS` (100)
+  - New selector arrays: `TRANSCRIPT_CONTAINER`, `TRANSCRIPT_PANEL_CLOSE`
+- **Auto-close Transcript Panel**: Panel is closed after extraction if Distill opened it, preserving user's UI state
+  - `weOpenedPanel` flag tracks whether Distill opened the panel vs. it was already open
+
+**v4.3.0** (2026-03-11)
 - **Transcript Extraction Fix**: Updated DOM selectors for YouTube's view model migration (Feb 2026)
   - Primary: `transcript-segment-view-model`, `.ytwTranscriptSegmentViewModelTimestamp`, `.yt-core-attributed-string`
   - Legacy Polymer selectors kept as automatic fallback via `TRANSCRIPT_SEGMENTS_LEGACY`
@@ -515,11 +536,16 @@ Semantic versioning (MAJOR.MINOR.PATCH):
 
 Increment by 0.0.1 for patches, 0.1.0 for features.
 
+**Files requiring version updates:**
+- `manifest.json` — `"version"` field
+- `CHANGELOG.md` — new version entry at top
+- `CLAUDE.md` — `Current Version` in Project Overview, Version History entry, `Current Version` in footer
+
 ## Testing Checklist
 
 Manual testing required (no automated tests). Key areas to verify:
 
-- **Core:** Extension loads, transcript extraction works (TED Talks, music videos), timestamps formatted `[0:00] text`, error messages for videos without transcripts
+- **Core:** Extension loads, transcript extraction works (TED Talks, music videos), timestamps formatted `[0:00] text`, error messages for videos without transcripts, long videos (10+ min) extract full transcript (not truncated)
 - **Entry Points:** FAB appears on desktop, hides when modal opens, both FAB and extension icon open same modal
 - **Modal:** Bottom-right floating, no backdrop overlay, tab switching (Transcript/Summary), copy buttons, close (× and Escape), settings gear opens settings page
 - **Chat:** Input below summary, send via Enter/button, works with OpenAI and Claude, history persists across minimize/expand, clears on regenerate, 20-message limit
@@ -527,6 +553,8 @@ Manual testing required (no automated tests). Key areas to verify:
 - **Minimize:** Collapses to pill, expands with state preserved (tab, scroll, chat), navigation closes pill
 - **Caching:** First extraction caches, revisit loads instantly, 11th video evicts oldest, cache persists across sessions
 - **Settings:** Settings persist, API keys load per-provider, models auto-fetch on key entry, AI summary appears in modal
+- **Scroll-to-load:** Long videos extract full transcript, short videos still work, scroll container found via selectors or DOM walk
+- **Panel auto-close:** Panel opened by Distill closes after extraction, panel already open stays open
 - **GPT-5-nano:** Uses 16384 token limit, transient errors (429/500/502/503) trigger retry (max 2)
 
 ## Known Limitations
@@ -574,18 +602,19 @@ Manual testing required (no automated tests). Key areas to verify:
 
 ## Project Management
 
-- Linear workspace: Engineering team. Use `mcp__plugin_linear_linear__*` MCP tools for issue management.
+- Linear workspace: Engineering team. Use `mcp__claude_ai_Linear__*` MCP tools for issue management.
+- Linear project: "v4.3 - Transcript Update" under initiative "Distill - Youtube Extraction"
 - Linear issue states: Check available states with `list_issue_statuses` before setting state — workspace may not have "Cancelled" as a state name.
 - Planning docs stored in `docs/`
 
 ## Planned Changes
 
-None currently.
+No planned changes at this time.
 
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.3.0). Default branch on GitHub.
+- `main` - Stable branch (contains v4.3.1). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -621,4 +650,4 @@ None currently.
 ---
 
 **Last Updated:** 2026-03-11
-**Current Version:** 4.3.0
+**Current Version:** 4.3.2
