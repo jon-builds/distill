@@ -34,6 +34,56 @@ function waitForElement(selector, timeout = YTE_CONSTANTS.MUTATION_TIMEOUT) {
   });
 }
 
+/**
+ * Walk up the DOM to find the nearest scrollable ancestor
+ * @param {Element} element - Starting element
+ * @returns {Element|null} - Scrollable parent or null
+ */
+function findScrollableParent(element) {
+  let current = element.parentElement;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && current.scrollHeight > current.clientHeight) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Scroll through the transcript container to load all virtualized segments
+ * @param {Element} container - Scrollable container element
+ * @param {string} segmentSelector - CSS selector for transcript segments
+ * @returns {Promise<void>}
+ */
+async function scrollToLoadAllSegments(container, segmentSelector) {
+  let previousCount = 0;
+  let stableChecks = 0;
+
+  for (let i = 0; i < YTE_CONSTANTS.SCROLL_MAX_ITERATIONS; i++) {
+    // Scroll down by one viewport height
+    container.scrollTop += container.clientHeight;
+
+    await new Promise(resolve => setTimeout(resolve, YTE_CONSTANTS.SCROLL_STEP_DELAY));
+
+    const currentCount = document.querySelectorAll(segmentSelector).length;
+
+    if (currentCount === previousCount) {
+      stableChecks++;
+      if (stableChecks >= 2) {
+        // Count hasn't changed for 2 consecutive checks — all segments loaded
+        break;
+      }
+    } else {
+      stableChecks = 0;
+    }
+
+    previousCount = currentCount;
+  }
+}
+
 async function getTranscript() {
   try {
     // Get video ID from URL
@@ -43,6 +93,9 @@ async function getTranscript() {
     if (!videoId) {
       return { error: 'No video ID found. Please open a YouTube video.' };
     }
+
+    // Track whether we opened the transcript panel (to close it later)
+    let weOpenedPanel = false;
 
     // First, check if transcript is already open (try new selectors, then legacy)
     let transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
@@ -55,7 +108,10 @@ async function getTranscript() {
       let moreActionsButton = null;
       for (const selector of YTE_CONSTANTS.SELECTORS.MORE_ACTIONS) {
         moreActionsButton = document.querySelector(selector);
-        if (moreActionsButton) break;
+        if (moreActionsButton) {
+          console.log(`[Distill] More actions button matched selector: ${selector}`);
+          break;
+        }
       }
 
       if (moreActionsButton) {
@@ -71,18 +127,21 @@ async function getTranscript() {
 
         // Look for transcript button in the menu
         const menuItems = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.MENU_ITEMS);
+        console.log(`[Distill] Menu items found: ${menuItems.length}`);
 
         let transcriptButton = null;
         for (const item of menuItems) {
           const text = item.textContent.toLowerCase();
           if (text.includes('transcript') || text.includes('show transcript')) {
             transcriptButton = item;
+            console.log('[Distill] Transcript button found in menu');
             break;
           }
         }
 
         if (transcriptButton) {
           transcriptButton.click();
+          weOpenedPanel = true;
 
           // Wait for transcript segments to appear using MutationObserver
           // Try new view model selector first, then legacy
@@ -96,6 +155,10 @@ async function getTranscript() {
               await new Promise(resolve => setTimeout(resolve, 1500));
             }
           }
+
+          // Settle delay: let the transcript panel finish layout before scroll-container detection
+          console.log('[Distill] Panel opened via main path, waiting for layout settle');
+          await new Promise(resolve => setTimeout(resolve, 500));
         } else {
           // Try alternative: look for button directly
           const altTranscriptButton = Array.from(document.querySelectorAll('button, a')).find(
@@ -103,6 +166,7 @@ async function getTranscript() {
           );
           if (altTranscriptButton) {
             altTranscriptButton.click();
+            weOpenedPanel = true;
             try {
               await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
             } catch (e) {
@@ -112,15 +176,21 @@ async function getTranscript() {
                 await new Promise(resolve => setTimeout(resolve, 1500));
               }
             }
+
+            // Settle delay: let the transcript panel finish layout before scroll-container detection
+            console.log('[Distill] Panel opened via alt path, waiting for layout settle');
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
       }
 
       // Check again for transcript segments (new selectors first, then legacy)
       transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
+      console.log(`[Distill] Segments after panel open (new selectors): ${transcriptSegments.length}`);
       if (transcriptSegments.length === 0) {
         console.warn('[Distill] New selectors found no segments, trying legacy selectors');
         transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+        console.log(`[Distill] Segments after panel open (legacy selectors): ${transcriptSegments.length}`);
       }
     }
 
@@ -128,6 +198,47 @@ async function getTranscript() {
       return { error: 'No transcript found. This video may not have captions available, or the transcript UI has changed. Try opening the transcript manually first.' };
     }
 
+    // Scroll to load all virtualized segments
+    const activeSelector = document.querySelector(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS)
+      ? YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS
+      : YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY;
+
+    const firstSegment = document.querySelector(activeSelector);
+    let scrollContainer = null;
+
+    // Try known container selectors first
+    for (const selector of YTE_CONSTANTS.SELECTORS.TRANSCRIPT_CONTAINER) {
+      const candidate = document.querySelector(selector);
+      if (candidate && candidate.scrollHeight > candidate.clientHeight) {
+        scrollContainer = candidate;
+        console.log(`[Distill] Scroll container matched selector: ${selector} (scrollHeight=${candidate.scrollHeight}, clientHeight=${candidate.clientHeight})`);
+        break;
+      }
+    }
+
+    // Fall back to walking up from first segment
+    if (!scrollContainer && firstSegment) {
+      scrollContainer = findScrollableParent(firstSegment);
+      if (scrollContainer) {
+        console.log(`[Distill] Scroll container found via DOM walk: ${scrollContainer.tagName}#${scrollContainer.id || '(no id)'}`);
+      }
+    }
+
+    if (!scrollContainer) {
+      console.warn('[Distill] No scroll container found — scroll-to-load will be skipped');
+    }
+
+    if (scrollContainer) {
+      await scrollToLoadAllSegments(scrollContainer, activeSelector);
+      // Scroll back to top before extraction
+      scrollContainer.scrollTop = 0;
+      await new Promise(resolve => setTimeout(resolve, YTE_CONSTANTS.SCROLL_STEP_DELAY));
+      // Re-query segments after scroll-to-load
+      transcriptSegments = document.querySelectorAll(activeSelector);
+      console.log(`[Distill] Segments after scroll-to-load: ${transcriptSegments.length}`);
+    }
+
+    console.log(`[Distill] Final segment count for extraction: ${transcriptSegments.length}`);
     let transcriptText = '';
 
     transcriptSegments.forEach(segment => {
@@ -159,6 +270,17 @@ async function getTranscript() {
 
     if (!transcriptText.trim()) {
       return { error: 'Transcript panel found but could not extract text. Please try again.' };
+    }
+
+    // Close the transcript panel if we opened it
+    if (weOpenedPanel) {
+      for (const selector of YTE_CONSTANTS.SELECTORS.TRANSCRIPT_PANEL_CLOSE) {
+        const closeButton = document.querySelector(selector);
+        if (closeButton) {
+          closeButton.click();
+          break;
+        }
+      }
     }
 
     return {

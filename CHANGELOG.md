@@ -5,6 +5,28 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.2] - 2026-03-11
+
+### Fixed
+- Scroll-to-load skipped when Distill opens the transcript panel itself — only ~4-5 visible segments extracted instead of full transcript
+- Added 500ms settle delay after panel open to let the container finish layout before scroll-container detection
+- Broadened `TRANSCRIPT_CONTAINER` selectors to match YouTube's engagement panel DOM (`ytd-engagement-panel-section-list-renderer`)
+
+### Added
+- Diagnostic `[Distill]` console logging throughout extraction flow for easier debugging (selector matches, segment counts, scroll container detection)
+
+## [4.3.1] - 2026-03-11
+
+### Fixed
+- Truncated transcripts on longer videos due to YouTube's virtual scrolling — only ~10-20 segments were captured instead of the full transcript
+- Added scroll-to-load logic that scrolls through the transcript panel to force all virtualized segments into the DOM before extraction
+- Transcript panel now auto-closes after extraction if Distill opened it, preserving the user's original UI state
+
+### Added
+- `findScrollableParent()` and `scrollToLoadAllSegments()` helpers in `content.js`
+- `SCROLL_STEP_DELAY`, `SCROLL_MAX_ITERATIONS` constants
+- `TRANSCRIPT_CONTAINER` and `TRANSCRIPT_PANEL_CLOSE` selector arrays in `constants.js`
+
 ## [4.3.0] - 2026-03-11
 
 ### Fixed

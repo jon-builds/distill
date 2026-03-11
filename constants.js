@@ -25,6 +25,10 @@ const YTE_CONSTANTS = {
   RETRY_DELAYS: [1000, 2000],
   RETRYABLE_STATUS_CODES: [429, 500, 502, 503, 529],
 
+  // Scroll-to-load settings
+  SCROLL_STEP_DELAY: 150,
+  SCROLL_MAX_ITERATIONS: 100,
+
   // YouTube DOM selectors
   SELECTORS: {
     MORE_ACTIONS: [
@@ -59,6 +63,17 @@ const YTE_CONSTANTS = {
       '#secondary #related',
       'ytd-watch-flexy #secondary #related',
       '#secondary.ytd-watch-flexy'
+    ],
+    TRANSCRIPT_CONTAINER: [
+      'ytd-transcript-search-panel-renderer #body',
+      'ytd-transcript-renderer #body',
+      'ytd-engagement-panel-section-list-renderer #content',
+      'ytd-engagement-panel-section-list-renderer #content #body'
+    ],
+    TRANSCRIPT_PANEL_CLOSE: [
+      'ytd-engagement-panel-section-list-renderer #visibility-button button[aria-label="Close"]',
+      'ytd-engagement-panel-section-list-renderer #header button[aria-label="Close"]',
+      'ytd-transcript-search-panel-renderer button[aria-label="Close"]'
     ]
   }
 };
@@ -68,5 +83,7 @@ Object.freeze(YTE_CONSTANTS);
 Object.freeze(YTE_CONSTANTS.SELECTORS);
 Object.freeze(YTE_CONSTANTS.RETRY_DELAYS);
 Object.freeze(YTE_CONSTANTS.RETRYABLE_STATUS_CODES);
+Object.freeze(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_CONTAINER);
+Object.freeze(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_PANEL_CLOSE);
 
 window.YTE_CONSTANTS = YTE_CONSTANTS;
