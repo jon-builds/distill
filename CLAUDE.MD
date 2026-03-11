@@ -576,7 +576,7 @@ Manual testing required (no automated tests). Key areas to verify:
 
 - Linear workspace: Engineering team. Use `mcp__plugin_linear_linear__*` MCP tools for issue management.
 - Linear issue states: Check available states with `list_issue_statuses` before setting state — workspace may not have "Cancelled" as a state name.
-- Planning docs stored in `docs/` (e.g., `implementation-plan.md`)
+- Planning docs stored in `docs/`
 
 ## Planned Changes
 
