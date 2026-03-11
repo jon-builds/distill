@@ -255,7 +255,7 @@ Defines `YTE_CONSTANTS` object with:
 - **Cache limits:** `MAX_CACHED_VIDEOS` (10), `MAX_CHAT_MESSAGES` (20)
 - **API defaults:** `DEFAULT_MAX_TOKENS_OPENAI` (4000), `NANO_MAX_TOKENS` (16384), `CHAT_CONTEXT_CHAR_LIMIT` (4000)
 - **Retry settings:** `MAX_RETRIES` (2), `RETRY_DELAYS`, `RETRYABLE_STATUS_CODES` (429, 500, 502, 503, 529)
-- **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
+- **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
 
 Loaded first in manifest (before `utils.js`). Object is frozen to prevent mutation.
 
@@ -537,6 +537,8 @@ Manual testing required (no automated tests). Key areas to verify:
 10. **Chat context limited:** Chat uses summary (not full transcript) as context to manage tokens. Max 20 messages per video.
 11. **Streaming partial markdown:** During streaming, raw text is shown (not rendered markdown). Full markdown rendered on completion.
 12. **MV3 service worker timeout:** Active fetch keeps service worker alive, but streaming may disconnect on very long responses (30s idle timeout)
+13. **Timedtext API non-functional:** YouTube's timedtext URLs return empty responses (as of March 2026). Cannot be used for transcript extraction from content scripts.
+14. **InnerTube get_transcript requires auth:** The `/youtubei/v1/get_transcript` endpoint returns `400 FAILED_PRECONDITION` — content scripts can't replicate YouTube's internal SAPISIDHASH auth.
 
 ## Security Notes
 
@@ -553,6 +555,26 @@ Manual testing required (no automated tests). Key areas to verify:
 - User responsible for key security and rotation
 
 **No external services:** Extension doesn't send data to any third parties. API calls go directly to OpenAI/Claude.
+
+## YouTube Internal Data Structures
+
+- `ytInitialPlayerResponse` — Embedded in page `<script>` tags, contains `captions.playerCaptionsTracklistRenderer.captionTracks[]` with `baseUrl` for timed text API
+- `ytInitialData` — Contains engagement panels including `engagement-panel-searchable-transcript` with lazy-loaded transcript via `/youtubei/v1/get_transcript`
+- Content scripts can't access `window.ytInitialPlayerResponse` (isolated world) — must parse from script tags or Polymer `__data` on `ytd-watch-flexy`
+- **Timedtext API non-functional (as of March 2026):** Fetching timedtext URLs (`/api/timedtext?...&fmt=json3`) returns `200` with empty body in both JSON3 and XML formats. YouTube appears to have deprecated direct timedtext URL fetching.
+- **InnerTube `get_transcript` API requires auth:** Returns `400 FAILED_PRECONDITION` even with SAPISIDHASH. Content scripts can't replicate YouTube's internal auth.
+- **YouTube migrated transcript DOM to view model components (Feb 2026):** Transcript segments now use `<transcript-segment-view-model>` elements instead of `ytd-transcript-segment-renderer`. New timestamp class: `.ytwTranscriptSegmentViewModelTimestamp`. New text class: `.yt-core-attributed-string`.
+- `getPlayerResponse()` on `#movie_player` returns captions data, but the URLs it provides are non-functional
+
+## Project Management
+
+- Linear workspace: Engineering team. Use `mcp__plugin_linear_linear__*` MCP tools for issue management.
+- Linear issue states: Check available states with `list_issue_statuses` before setting state — workspace may not have "Cancelled" as a state name.
+- Planning docs stored in `docs/` (e.g., `implementation-plan.md`)
+
+## Planned Changes
+
+- **ENG-48 (v4.3.0):** Transcript extraction fix — update DOM selectors to YouTube's new view model components (`transcript-segment-view-model`) with legacy Polymer selectors as fallback. Original data-based approach (timedtext API) abandoned — API returns empty responses. See `docs/implementation-plan.md` and Linear ENG-48, ENG-49, ENG-53, ENG-54 (ENG-50, ENG-51, ENG-52 closed as won't-do).
 
 ## Git Workflow
 
