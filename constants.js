@@ -35,13 +35,16 @@ const YTE_CONSTANTS = {
     ],
     MENU_ITEMS: 'ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer, ytd-menu-popup-renderer ytd-menu-service-item-renderer',
     MENU_POPUP: 'ytd-menu-popup-renderer tp-yt-paper-listbox',
-    TRANSCRIPT_SEGMENTS: 'ytd-transcript-segment-renderer',
+    TRANSCRIPT_SEGMENTS: 'transcript-segment-view-model',
+    TRANSCRIPT_SEGMENTS_LEGACY: 'ytd-transcript-segment-renderer',
     SEGMENT_TIMESTAMP: [
+      '.ytwTranscriptSegmentViewModelTimestamp',
       '.segment-timestamp',
       '[class*="segment-timestamp"]',
       'div[class*="cue-group"] div[class*="cue"]:first-child'
     ],
     SEGMENT_TEXT: [
+      '.yt-core-attributed-string',
       '.segment-text',
       'yt-formatted-string.segment-text',
       '[class*="segment-text"]'

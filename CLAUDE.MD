@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.2.1
-**Branch Strategy:** `main` is the stable branch (contains v4.2.1). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.3.0
+**Branch Strategy:** `main` is the stable branch (contains v4.3.0). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -462,7 +462,13 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.2.1** (2026-03-04) - Current
+**v4.3.0** (2026-03-11) - Current
+- **Transcript Extraction Fix**: Updated DOM selectors for YouTube's view model migration (Feb 2026)
+  - Primary: `transcript-segment-view-model`, `.ytwTranscriptSegmentViewModelTimestamp`, `.yt-core-attributed-string`
+  - Legacy Polymer selectors kept as automatic fallback via `TRANSCRIPT_SEGMENTS_LEGACY`
+  - `content.js` tries new selectors first, falls back to legacy if no segments found
+
+**v4.2.1** (2026-03-04)
 - Extension name updated to "Distill: YouTube AI Summaries & Chat — Direct API, No Servers" for Chrome Web Store discoverability
 
 **v4.2.0** (2026-03-04)
@@ -574,12 +580,12 @@ Manual testing required (no automated tests). Key areas to verify:
 
 ## Planned Changes
 
-- **ENG-48 (v4.3.0):** Transcript extraction fix — update DOM selectors to YouTube's new view model components (`transcript-segment-view-model`) with legacy Polymer selectors as fallback. Original data-based approach (timedtext API) abandoned — API returns empty responses. See `docs/implementation-plan.md` and Linear ENG-48, ENG-49, ENG-53, ENG-54 (ENG-50, ENG-51, ENG-52 closed as won't-do).
+None currently.
 
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.2.1). Default branch on GitHub.
+- `main` - Stable branch (contains v4.3.0). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -614,5 +620,5 @@ Manual testing required (no automated tests). Key areas to verify:
 
 ---
 
-**Last Updated:** 2026-03-04
-**Current Version:** 4.2.1
+**Last Updated:** 2026-03-11
+**Current Version:** 4.3.0

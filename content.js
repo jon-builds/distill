@@ -44,8 +44,11 @@ async function getTranscript() {
       return { error: 'No video ID found. Please open a YouTube video.' };
     }
 
-    // First, check if transcript is already open
+    // First, check if transcript is already open (try new selectors, then legacy)
     let transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
+    if (transcriptSegments.length === 0) {
+      transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+    }
 
     if (transcriptSegments.length === 0) {
       // Try to open the transcript panel
@@ -82,11 +85,16 @@ async function getTranscript() {
           transcriptButton.click();
 
           // Wait for transcript segments to appear using MutationObserver
+          // Try new view model selector first, then legacy
           try {
             await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
           } catch (e) {
-            // Fallback: wait a fixed time
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            try {
+              await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+            } catch (e2) {
+              // Fallback: wait a fixed time
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            }
           }
         } else {
           // Try alternative: look for button directly
@@ -98,14 +106,22 @@ async function getTranscript() {
             try {
               await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
             } catch (e) {
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              try {
+                await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+              } catch (e2) {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+              }
             }
           }
         }
       }
 
-      // Check again for transcript segments
+      // Check again for transcript segments (new selectors first, then legacy)
       transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
+      if (transcriptSegments.length === 0) {
+        console.warn('[Distill] New selectors found no segments, trying legacy selectors');
+        transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+      }
     }
 
     if (transcriptSegments.length === 0) {
