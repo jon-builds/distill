@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.3.2
-**Branch Strategy:** `main` is the stable branch (contains v4.3.2). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.3.3
+**Branch Strategy:** `main` is the stable branch (contains v4.3.3). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -469,7 +469,11 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.3.2** (2026-03-11) - Current
+**v4.3.3** (2026-04-07) - Current
+- **Markdown list rendering fix**: Indented list items (`  - item`) in AI summaries now render as proper bullets instead of plain text with visible `-`
+- Updated `markdownToHtml()` regexes to allow optional leading whitespace for unordered and ordered lists
+
+**v4.3.2** (2026-03-11)
 - **Scroll-to-load fix for panel open**: Added 500ms settle delay after Distill opens transcript panel, fixing extraction returning only ~4-5 segments
 - **Broader TRANSCRIPT_CONTAINER selectors**: Added `ytd-engagement-panel-section-list-renderer` selectors for YouTube's engagement panel DOM
 - **Diagnostic logging**: `[Distill]`-prefixed console logs at key extraction decision points
@@ -649,5 +653,5 @@ No planned changes at this time.
 
 ---
 
-**Last Updated:** 2026-03-11
-**Current Version:** 4.3.2
+**Last Updated:** 2026-04-07
+**Current Version:** 4.3.3

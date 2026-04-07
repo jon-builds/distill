@@ -160,8 +160,8 @@ class Utils {
       }
 
       // Check for list items
-      const unorderedMatch = line.match(/^[\*\-]\s+(.+)$/);
-      const orderedMatch = line.match(/^\d+\.\s+(.+)$/);
+      const unorderedMatch = line.match(/^\s*[\*\-]\s+(.+)$/);
+      const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
 
       if (unorderedMatch || orderedMatch) {
         let content = unorderedMatch ? unorderedMatch[1] : orderedMatch[1];

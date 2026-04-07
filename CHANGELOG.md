@@ -5,6 +5,12 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.3] - 2026-04-07
+
+### Fixed
+- Indented markdown list items (e.g. `  - item`) in AI summaries rendered as plain text with visible `-` instead of proper bullet points
+- Updated `markdownToHtml()` list regexes to allow optional leading whitespace for both unordered and ordered lists
+
 ## [4.3.2] - 2026-03-11
 
 ### Fixed
