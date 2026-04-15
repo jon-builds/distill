@@ -31,11 +31,18 @@ const YTE_CONSTANTS = {
 
   // YouTube DOM selectors
   SELECTORS: {
+    DESCRIPTION_EXPAND: [
+      'ytd-text-inline-expander #expand',
+      'tp-yt-paper-button#expand',
+      '#expand'
+    ],
+    SHOW_TRANSCRIPT_BUTTON: [
+      'button[aria-label="Show transcript" i]',
+      'ytd-button-renderer button[aria-label*="transcript" i]'
+    ],
     MORE_ACTIONS: [
-      'button[aria-label="More actions"]',
-      'button[aria-label*="More"]',
-      'ytd-menu-renderer button',
-      '#button-shape > button[aria-label*="More"]'
+      'ytd-watch-metadata ytd-menu-renderer button[aria-label*="More" i]',
+      'ytd-watch-metadata button[aria-label="More actions"]'
     ],
     MENU_ITEMS: 'ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer, ytd-menu-popup-renderer ytd-menu-service-item-renderer',
     MENU_POPUP: 'ytd-menu-popup-renderer tp-yt-paper-listbox',
@@ -48,6 +55,8 @@ const YTE_CONSTANTS = {
       'div[class*="cue-group"] div[class*="cue"]:first-child'
     ],
     SEGMENT_TEXT: [
+      '.ytAttributedStringHost',
+      'span[role="text"]',
       '.yt-core-attributed-string',
       '.segment-text',
       'yt-formatted-string.segment-text',
@@ -85,5 +94,8 @@ Object.freeze(YTE_CONSTANTS.RETRY_DELAYS);
 Object.freeze(YTE_CONSTANTS.RETRYABLE_STATUS_CODES);
 Object.freeze(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_CONTAINER);
 Object.freeze(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_PANEL_CLOSE);
+Object.freeze(YTE_CONSTANTS.SELECTORS.DESCRIPTION_EXPAND);
+Object.freeze(YTE_CONSTANTS.SELECTORS.SHOW_TRANSCRIPT_BUTTON);
+Object.freeze(YTE_CONSTANTS.SELECTORS.MORE_ACTIONS);
 
 window.YTE_CONSTANTS = YTE_CONSTANTS;

@@ -84,6 +84,126 @@ async function scrollToLoadAllSegments(container, segmentSelector) {
   }
 }
 
+/**
+ * Wait for transcript segments (new view-model selector, then legacy) then settle
+ */
+async function waitForSegmentsAndSettle() {
+  try {
+    await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
+  } catch (e) {
+    try {
+      await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
+    } catch (e2) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+  // Settle delay: let the transcript panel finish layout before scroll-container detection
+  await new Promise(resolve => setTimeout(resolve, 500));
+}
+
+/**
+ * Primary path (as of 2026-04-15): expand the video description ("...more")
+ * and click the inline "Show transcript" button it reveals.
+ * See docs/youtube-dom-layout.md for current layout reference.
+ * @returns {Promise<boolean>} true if the path was taken successfully
+ */
+async function tryDescriptionExpanderPath() {
+  let expandButton = null;
+  for (const selector of YTE_CONSTANTS.SELECTORS.DESCRIPTION_EXPAND) {
+    expandButton = document.querySelector(selector);
+    if (expandButton) {
+      console.log(`[Distill] Description expand matched selector: ${selector}`);
+      break;
+    }
+  }
+  if (!expandButton) {
+    console.log('[Distill] Description expand button not found');
+    return false;
+  }
+
+  expandButton.click();
+
+  // Wait for the inline "Show transcript" button to appear
+  try {
+    await waitForElement(YTE_CONSTANTS.SELECTORS.SHOW_TRANSCRIPT_BUTTON[0], 2000);
+  } catch (e) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+  }
+
+  let showButton = null;
+  for (const selector of YTE_CONSTANTS.SELECTORS.SHOW_TRANSCRIPT_BUTTON) {
+    const candidates = document.querySelectorAll(selector);
+    for (const candidate of candidates) {
+      if (candidate.offsetParent !== null) {
+        showButton = candidate;
+        console.log(`[Distill] Show transcript button matched selector: ${selector}`);
+        break;
+      }
+    }
+    if (showButton) break;
+  }
+  if (!showButton) {
+    console.log('[Distill] Show transcript button not visible after description expand');
+    return false;
+  }
+
+  showButton.click();
+  console.log('[Distill] Panel opened via description expander path');
+  await waitForSegmentsAndSettle();
+  return true;
+}
+
+/**
+ * Fallback path: per-video "More actions" (3-dot) menu → "Show transcript" item.
+ * Worked until 2026-04-15 — kept in case YouTube re-adds the item to some videos/regions.
+ * @returns {Promise<boolean>} true if the path was taken successfully
+ */
+async function tryMenuPath() {
+  let moreActionsButton = null;
+  for (const selector of YTE_CONSTANTS.SELECTORS.MORE_ACTIONS) {
+    moreActionsButton = document.querySelector(selector);
+    if (moreActionsButton) {
+      console.log(`[Distill] More actions button matched selector: ${selector}`);
+      break;
+    }
+  }
+  if (!moreActionsButton) {
+    console.log('[Distill] More actions button not found');
+    return false;
+  }
+
+  moreActionsButton.click();
+
+  try {
+    await waitForElement(YTE_CONSTANTS.SELECTORS.MENU_POPUP);
+  } catch (e) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+  }
+
+  const menuItems = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.MENU_ITEMS);
+  console.log(`[Distill] Menu items found: ${menuItems.length}`);
+
+  let transcriptButton = null;
+  for (const item of menuItems) {
+    const text = item.textContent.toLowerCase();
+    if (text.includes('transcript') || text.includes('show transcript')) {
+      transcriptButton = item;
+      console.log('[Distill] Transcript button found in menu');
+      break;
+    }
+  }
+
+  if (!transcriptButton) {
+    console.log('[Distill] No transcript item in More actions menu');
+    return false;
+  }
+
+  transcriptButton.click();
+  console.log('[Distill] Panel opened via menu path');
+  await waitForSegmentsAndSettle();
+  return true;
+}
+
 async function getTranscript() {
   try {
     // Get video ID from URL
@@ -104,87 +224,11 @@ async function getTranscript() {
     }
 
     if (transcriptSegments.length === 0) {
-      // Try to open the transcript panel
-      let moreActionsButton = null;
-      for (const selector of YTE_CONSTANTS.SELECTORS.MORE_ACTIONS) {
-        moreActionsButton = document.querySelector(selector);
-        if (moreActionsButton) {
-          console.log(`[Distill] More actions button matched selector: ${selector}`);
-          break;
-        }
-      }
+      // Try description-expander path first (current YouTube layout), fall back to menu path
+      const opened = await tryDescriptionExpanderPath() || await tryMenuPath();
+      weOpenedPanel = opened;
 
-      if (moreActionsButton) {
-        moreActionsButton.click();
-
-        // Wait for menu to appear using MutationObserver
-        try {
-          await waitForElement(YTE_CONSTANTS.SELECTORS.MENU_POPUP);
-        } catch (e) {
-          // Fallback: wait a fixed time if observer fails
-          await new Promise(resolve => setTimeout(resolve, 800));
-        }
-
-        // Look for transcript button in the menu
-        const menuItems = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.MENU_ITEMS);
-        console.log(`[Distill] Menu items found: ${menuItems.length}`);
-
-        let transcriptButton = null;
-        for (const item of menuItems) {
-          const text = item.textContent.toLowerCase();
-          if (text.includes('transcript') || text.includes('show transcript')) {
-            transcriptButton = item;
-            console.log('[Distill] Transcript button found in menu');
-            break;
-          }
-        }
-
-        if (transcriptButton) {
-          transcriptButton.click();
-          weOpenedPanel = true;
-
-          // Wait for transcript segments to appear using MutationObserver
-          // Try new view model selector first, then legacy
-          try {
-            await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
-          } catch (e) {
-            try {
-              await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
-            } catch (e2) {
-              // Fallback: wait a fixed time
-              await new Promise(resolve => setTimeout(resolve, 1500));
-            }
-          }
-
-          // Settle delay: let the transcript panel finish layout before scroll-container detection
-          console.log('[Distill] Panel opened via main path, waiting for layout settle');
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
-          // Try alternative: look for button directly
-          const altTranscriptButton = Array.from(document.querySelectorAll('button, a')).find(
-            el => el.textContent.toLowerCase().includes('show transcript')
-          );
-          if (altTranscriptButton) {
-            altTranscriptButton.click();
-            weOpenedPanel = true;
-            try {
-              await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
-            } catch (e) {
-              try {
-                await waitForElement(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY);
-              } catch (e2) {
-                await new Promise(resolve => setTimeout(resolve, 1500));
-              }
-            }
-
-            // Settle delay: let the transcript panel finish layout before scroll-container detection
-            console.log('[Distill] Panel opened via alt path, waiting for layout settle');
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-      }
-
-      // Check again for transcript segments (new selectors first, then legacy)
+      // Re-query segments
       transcriptSegments = document.querySelectorAll(YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS);
       console.log(`[Distill] Segments after panel open (new selectors): ${transcriptSegments.length}`);
       if (transcriptSegments.length === 0) {

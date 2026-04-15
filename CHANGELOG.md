@@ -5,6 +5,24 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.5] - 2026-04-15
+
+### Fixed
+- "Transcript panel found but could not extract text" — segment text wrapper class changed from `.yt-core-attributed-string` to `.ytAttributedStringHost`. Discovered while testing v4.3.4 against `youtube.com/watch?v=wMwrPT4rHDA`: panel opened correctly but the extraction loop's text selectors found no element, so `transcriptText` stayed empty.
+- Prepended `.ytAttributedStringHost` and `span[role="text"]` to `SEGMENT_TEXT` selectors. Older selectors retained as fallback.
+
+## [4.3.4] - 2026-04-15
+
+### Fixed
+- Transcript extraction broken for all videos — YouTube removed "Show transcript" from the per-video "More actions" (3-dot) menu, so Distill returned "No transcript found" on every video
+- New primary path: expand the description ("...more") and click the inline "Show transcript" button. Old menu path retained as fallback for any video that still exposes it.
+- Scoped `MORE_ACTIONS` selectors to `ytd-watch-metadata` — previous selectors matched up to 28 "More" buttons on the page (sidebar videos, hidden controls), often clicking an invisible one
+
+### Added
+- `DESCRIPTION_EXPAND` and `SHOW_TRANSCRIPT_BUTTON` selector arrays in `constants.js`
+- `tryDescriptionExpanderPath()` and `tryMenuPath()` helpers in `content.js`
+- `docs/youtube-dom-layout.md` — living reference doc for YouTube's transcript DOM, updated on every layout-change fix
+
 ## [4.3.3] - 2026-04-07
 
 ### Fixed

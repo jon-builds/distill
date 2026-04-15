@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.3.3
-**Branch Strategy:** `main` is the stable branch (contains v4.3.3). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.3.5
+**Branch Strategy:** `main` is the stable branch (contains v4.3.5). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -201,7 +201,7 @@ All functions use `fetch()` with proper authentication headers. Streaming uses `
 Extracts transcripts from YouTube's DOM:
 
 1. Checks if transcript panel is open
-2. If not, clicks "More actions" button → "Show transcript" menu item (tracks `weOpenedPanel` flag)
+2. If not, opens the panel via `tryDescriptionExpanderPath()` (primary, as of v4.3.5): expands the description (`#expand`) → clicks the inline `button[aria-label="Show transcript"]`. Falls back to `tryMenuPath()` (legacy "More actions" menu) if the new path fails. Tracks `weOpenedPanel` flag. See `docs/youtube-dom-layout.md` for the current YouTube DOM layout reference.
 3. Uses MutationObserver (`waitForElement()`) to detect DOM changes, with fixed-delay fallbacks
 4. Scrolls through transcript container to load all virtualized segments (`scrollToLoadAllSegments()`)
 5. Queries transcript segments via `YTE_CONSTANTS.SELECTORS.TRANSCRIPT_SEGMENTS`
@@ -262,7 +262,7 @@ Defines `YTE_CONSTANTS` object with:
 - **Cache limits:** `MAX_CACHED_VIDEOS` (10), `MAX_CHAT_MESSAGES` (20)
 - **API defaults:** `DEFAULT_MAX_TOKENS_OPENAI` (4000), `NANO_MAX_TOKENS` (16384), `CHAT_CONTEXT_CHAR_LIMIT` (4000)
 - **Retry settings:** `MAX_RETRIES` (2), `RETRY_DELAYS`, `RETRYABLE_STATUS_CODES` (429, 500, 502, 503, 529)
-- **YouTube selectors:** `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.TRANSCRIPT_CONTAINER[]`, `SELECTORS.TRANSCRIPT_PANEL_CLOSE[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
+- **YouTube selectors:** `SELECTORS.DESCRIPTION_EXPAND[]`, `SELECTORS.SHOW_TRANSCRIPT_BUTTON[]`, `SELECTORS.MORE_ACTIONS[]`, `SELECTORS.TRANSCRIPT_SEGMENTS`, `SELECTORS.TRANSCRIPT_SEGMENTS_LEGACY`, `SELECTORS.SEGMENT_TIMESTAMP[]`, `SELECTORS.SEGMENT_TEXT[]`, `SELECTORS.VIDEO_TITLE[]`, `SELECTORS.SIDEBAR[]`, `SELECTORS.TRANSCRIPT_CONTAINER[]`, `SELECTORS.TRANSCRIPT_PANEL_CLOSE[]`, `SELECTORS.MENU_ITEMS`, `SELECTORS.MENU_POPUP`
 
 Loaded first in manifest (before `utils.js`). Object is frozen to prevent mutation.
 
@@ -469,7 +469,18 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.3.3** (2026-04-07) - Current
+**v4.3.5** (2026-04-15) - Current
+- **Segment text wrapper class fix**: YouTube migrated the per-segment text wrapper from `.yt-core-attributed-string` to `.ytAttributedStringHost`. Without this fix, panel opens correctly but the extraction loop's text selectors find nothing → "Transcript panel found but could not extract text" error.
+- Prepended `.ytAttributedStringHost` and `span[role="text"]` to `SEGMENT_TEXT` in `constants.js`. Older selectors retained as fallback.
+
+**v4.3.4** (2026-04-15)
+- **Transcript extraction entry-point fix**: YouTube removed "Show transcript" from the per-video "More actions" (3-dot) menu, breaking extraction for every video
+- New primary path in `content.js`: `tryDescriptionExpanderPath()` — expands description (`#expand`) and clicks the inline `button[aria-label="Show transcript"]`. Falls back to `tryMenuPath()` (legacy menu) if the new path fails.
+- Scoped `MORE_ACTIONS` selectors to `ytd-watch-metadata` to avoid matching one of 28+ "More" buttons on the page (sidebar videos, hidden controls)
+- Added `DESCRIPTION_EXPAND` and `SHOW_TRANSCRIPT_BUTTON` selector arrays to `constants.js`
+- Added `docs/youtube-dom-layout.md` — living reference doc capturing the current YouTube DOM layout, breakage history, and a next-time diagnostic checklist
+
+**v4.3.3** (2026-04-07)
 - **Markdown list rendering fix**: Indented list items (`  - item`) in AI summaries now render as proper bullets instead of plain text with visible `-`
 - Updated `markdownToHtml()` regexes to allow optional leading whitespace for unordered and ordered lists
 
@@ -550,6 +561,7 @@ Increment by 0.0.1 for patches, 0.1.0 for features.
 Manual testing required (no automated tests). Key areas to verify:
 
 - **Core:** Extension loads, transcript extraction works (TED Talks, music videos), timestamps formatted `[0:00] text`, error messages for videos without transcripts, long videos (10+ min) extract full transcript (not truncated)
+- **Entry path:** Console shows `[Distill] Description expand matched` → `Show transcript button matched` → `Panel opened via description expander path`. Menu fallback only fires if description path returns false.
 - **Entry Points:** FAB appears on desktop, hides when modal opens, both FAB and extension icon open same modal
 - **Modal:** Bottom-right floating, no backdrop overlay, tab switching (Transcript/Summary), copy buttons, close (× and Escape), settings gear opens settings page
 - **Chat:** Input below summary, send via Enter/button, works with OpenAI and Claude, history persists across minimize/expand, clears on regenerate, 20-message limit
@@ -560,6 +572,10 @@ Manual testing required (no automated tests). Key areas to verify:
 - **Scroll-to-load:** Long videos extract full transcript, short videos still work, scroll container found via selectors or DOM walk
 - **Panel auto-close:** Panel opened by Distill closes after extraction, panel already open stays open
 - **GPT-5-nano:** Uses 16384 token limit, transient errors (429/500/502/503) trigger retry (max 2)
+
+## When YouTube transcript extraction breaks
+
+Read `docs/youtube-dom-layout.md` first — it has the current selectors, breakage history (v4.3.0 → v4.3.5 so far), a next-time diagnostic checklist, the Playwright probe pattern (with the Trusted Types CSP gotcha), and a verification recipe. Update it on every layout-change fix, before bumping CHANGELOG.
 
 ## Known Limitations
 
@@ -601,7 +617,7 @@ Manual testing required (no automated tests). Key areas to verify:
 - Content scripts can't access `window.ytInitialPlayerResponse` (isolated world) — must parse from script tags or Polymer `__data` on `ytd-watch-flexy`
 - **Timedtext API non-functional (as of March 2026):** Fetching timedtext URLs (`/api/timedtext?...&fmt=json3`) returns `200` with empty body in both JSON3 and XML formats. YouTube appears to have deprecated direct timedtext URL fetching.
 - **InnerTube `get_transcript` API requires auth:** Returns `400 FAILED_PRECONDITION` even with SAPISIDHASH. Content scripts can't replicate YouTube's internal auth.
-- **YouTube migrated transcript DOM to view model components (Feb 2026):** Transcript segments now use `<transcript-segment-view-model>` elements instead of `ytd-transcript-segment-renderer`. New timestamp class: `.ytwTranscriptSegmentViewModelTimestamp`. New text class: `.yt-core-attributed-string`.
+- **YouTube DOM layout:** `docs/youtube-dom-layout.md` is the source of truth for current selectors, breakage history, and the next-time diagnostic checklist. Update it on every layout-change fix.
 - `getPlayerResponse()` on `#movie_player` returns captions data, but the URLs it provides are non-functional
 
 ## Project Management
@@ -610,6 +626,7 @@ Manual testing required (no automated tests). Key areas to verify:
 - Linear project: "v4.3 - Transcript Update" under initiative "Distill - Youtube Extraction"
 - Linear issue states: Check available states with `list_issue_statuses` before setting state — workspace may not have "Cancelled" as a state name.
 - Planning docs stored in `docs/`
+- **YouTube DOM layout reference:** `docs/youtube-dom-layout.md` — living document of the current transcript DOM, breakage history, and a next-time diagnostic checklist. Read this first when extraction breaks; update it on every layout-change fix.
 
 ## Planned Changes
 
@@ -618,7 +635,7 @@ No planned changes at this time.
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.3.1). Default branch on GitHub.
+- `main` - Stable branch (contains v4.3.5). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -653,5 +670,5 @@ No planned changes at this time.
 
 ---
 
-**Last Updated:** 2026-04-07
-**Current Version:** 4.3.3
+**Last Updated:** 2026-04-15
+**Current Version:** 4.3.5
