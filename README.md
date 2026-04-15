@@ -2,13 +2,25 @@
 
 A Chrome extension that distills YouTube videos into transcripts, AI summaries, and conversational chat — powered by OpenAI or Claude.
 
-**Current Version:** 4.2.1
+**Current Version:** 4.3.5
 
-## What's New in v4.2.1
+## What's New in v4.3.5
 
-- **Updated Extension Name** - Now "Distill: YouTube AI Summaries & Chat — Direct API, No Servers" for better Chrome Web Store discoverability
+- **Transcript extraction restored** - YouTube changed two things at once: (1) removed "Show transcript" from the per-video 3-dot menu, (2) renamed the segment text wrapper class. New primary path opens the transcript via the description expander ("...more") and clicks the inline "Show transcript" button.
 
 ## Previous Releases
+
+**v4.3.4** - Description-expander entry path added (paired with v4.3.5 segment-text fix)
+
+**v4.3.3** - Indented markdown list items in AI summaries now render as proper bullets
+
+**v4.3.2** - Scroll-to-load fix when Distill opens the transcript panel itself
+
+**v4.3.1** - Full transcript extraction via scroll-to-load (handles YouTube virtual scrolling); auto-close panel after extraction
+
+**v4.3.0** - Updated DOM selectors for YouTube's `transcript-segment-view-model` migration (Feb 2026)
+
+**v4.2.1** - Updated extension name for Chrome Web Store discoverability
 
 **v4.2.0** - Dynamic Claude model fetching from `/v1/models` API, 529 overloaded retry support
 
@@ -158,7 +170,7 @@ The output will be whatever your AI model generates based on your custom prompt.
 
 **"No transcript found"**
 - The video may not have captions/subtitles enabled
-- Try manually opening the transcript on YouTube first (click ⋯ below video → "Show transcript")
+- Try manually opening the transcript on YouTube first: expand the description ("...more" link below the video title), then click the "Show transcript" button that appears (as of April 2026, YouTube removed this from the 3-dot menu)
 - Wait a moment after the page loads, then try the extension again
 - Some videos may have transcripts disabled by the creator
 
