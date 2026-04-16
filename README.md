@@ -2,13 +2,16 @@
 
 A Chrome extension that distills YouTube videos into transcripts, AI summaries, and conversational chat — powered by OpenAI or Claude.
 
-**Current Version:** 4.3.5
+**Current Version:** 4.3.6
 
-## What's New in v4.3.5
+## What's New in v4.3.6
 
-- **Transcript extraction restored** - YouTube changed two things at once: (1) removed "Show transcript" from the per-video 3-dot menu, (2) renamed the segment text wrapper class. New primary path opens the transcript via the description expander ("...more") and clicks the inline "Show transcript" button.
+- **Summary headings render properly** - Section titles like "KEY TAKEAWAYS" now render as styled headings instead of flat bold text. Default prompt updated to emit real markdown headings (`##`). Existing custom prompts are left untouched.
+- **More markdown supported** - AI summaries and chat replies now render links, blockquotes, strikethrough, and horizontal rules instead of showing raw markdown characters.
 
 ## Previous Releases
+
+**v4.3.5** - Transcript extraction restored after YouTube renamed segment-text wrapper class and removed the 3-dot menu entry (paired with v4.3.4 description-expander path)
 
 **v4.3.4** - Description-expander entry path added (paired with v4.3.5 segment-text fix)
 

@@ -309,6 +309,33 @@
   font-style: italic;
 }
 
+.yte-summary-text del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.yte-summary-text a {
+  color: var(--yte-accent);
+  text-decoration: none;
+}
+
+.yte-summary-text a:hover {
+  text-decoration: underline;
+}
+
+.yte-summary-text blockquote {
+  margin: 0.75em 0;
+  padding: 0.25em 0 0.25em 12px;
+  border-left: 3px solid var(--yte-separator);
+  color: var(--yte-text-secondary);
+}
+
+.yte-summary-text hr {
+  border: none;
+  border-top: 1px solid var(--yte-border);
+  margin: 1em 0;
+}
+
 .yte-summary-text br {
   display: block;
   content: "";
@@ -583,6 +610,45 @@
 .yte-chat-bubble-assistant ol {
   margin: 0.25em 0;
   padding-left: 18px;
+}
+
+.yte-chat-bubble-assistant h1,
+.yte-chat-bubble-assistant h2,
+.yte-chat-bubble-assistant h3 {
+  margin: 0.5em 0 0.25em;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.yte-chat-bubble-assistant h1 { font-size: 16px; }
+.yte-chat-bubble-assistant h2 { font-size: 15px; }
+.yte-chat-bubble-assistant h3 { font-size: 14px; }
+
+.yte-chat-bubble-assistant a {
+  color: var(--yte-accent);
+  text-decoration: none;
+}
+
+.yte-chat-bubble-assistant a:hover {
+  text-decoration: underline;
+}
+
+.yte-chat-bubble-assistant blockquote {
+  margin: 0.5em 0;
+  padding: 0.1em 0 0.1em 10px;
+  border-left: 2px solid var(--yte-separator);
+  color: var(--yte-text-secondary);
+}
+
+.yte-chat-bubble-assistant del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.yte-chat-bubble-assistant hr {
+  border: none;
+  border-top: 1px solid var(--yte-border);
+  margin: 0.5em 0;
 }
 
 .yte-chat-input-row {

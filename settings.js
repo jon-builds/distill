@@ -59,18 +59,21 @@ async function fetchClaudeModels(apiKey) {
   }
 }
 
-const DEFAULT_PROMPT = `Summarize this YouTube transcript concisely:
+const DEFAULT_PROMPT = `Summarize this YouTube transcript concisely using markdown formatting.
 
-**KEY TAKEAWAYS** (3-5 bullets)
+## KEY TAKEAWAYS
+(3-5 bullets)
 - [timestamp] Main point in one sentence
 
-**BREAKDOWN** (up to 5 major topics)
+## BREAKDOWN
+(up to 5 major topics)
 - **[timestamp] Section Title** — Key points with specific details, data, or examples mentioned
 
-**NOTABLE** (if any)
+## NOTABLE
+(if any)
 - Statistics, sources, counterintuitive points, or actionable tips with timestamps
 
-RULES: Only include what's stated in the transcript. Note if anything is unclear or incomplete. Include timestamps where available.`;
+RULES: Use \`## \` for section headings (not bold). Only include what's stated in the transcript. Note if anything is unclear or incomplete. Include timestamps where available.`;
 
 document.addEventListener('DOMContentLoaded', async function() {
   const backBtn = document.getElementById('backBtn');

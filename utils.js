@@ -112,7 +112,8 @@ class Utils {
 
   /**
    * Simple markdown to HTML converter
-   * Supports: headers, bold, italic, lists, code blocks
+   * Supports: headers, bold, italic, strikethrough, inline code, links,
+   * unordered/ordered lists, code blocks, blockquotes, horizontal rules
    * @param {string} text - Markdown text
    * @returns {string} - HTML string
    */
@@ -125,10 +126,16 @@ class Utils {
                .replace(/>/g, '&gt;');
 
     // Helper function to apply inline formatting
+    // NOTE: order matters — code first (so backticks don't get wrapped),
+    // then links (so URLs with * or _ aren't mangled by bold/italic),
+    // then bold, italic, strikethrough. `>` in link URLs is already
+    // escaped to &gt; above, so the link regex uses [^)] only.
     const applyInlineFormatting = (str) => {
+      str = str.replace(/`(.+?)`/g, '<code>$1</code>');
+      str = str.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
       str = str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       str = str.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      str = str.replace(/`(.+?)`/g, '<code>$1</code>');
+      str = str.replace(/~~(.+?)~~/g, '<del>$1</del>');
       return str;
     };
 
@@ -138,12 +145,29 @@ class Utils {
     let inList = false;
     let listType = null;
     let inCodeBlock = false;
+    let inBlockquote = false;
+
+    const closeBlockquoteIfOpen = () => {
+      if (inBlockquote) {
+        processed.push('</blockquote>');
+        inBlockquote = false;
+      }
+    };
+    const closeListIfOpen = () => {
+      if (inList) {
+        processed.push(`</${listType}>`);
+        inList = false;
+        listType = null;
+      }
+    };
 
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
 
       // Code blocks
       if (line.trim().startsWith('```')) {
+        closeListIfOpen();
+        closeBlockquoteIfOpen();
         if (inCodeBlock) {
           processed.push('</code></pre>');
           inCodeBlock = false;
@@ -159,11 +183,36 @@ class Utils {
         continue;
       }
 
+      // Horizontal rule (---, ***, ___ on their own line)
+      if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        closeListIfOpen();
+        closeBlockquoteIfOpen();
+        processed.push('<hr>');
+        continue;
+      }
+
+      // Blockquote (lines starting with `>` — note: `>` was escaped to `&gt;` above)
+      const blockquoteMatch = line.match(/^\s*&gt;\s?(.*)$/);
+      if (blockquoteMatch) {
+        closeListIfOpen();
+        if (!inBlockquote) {
+          processed.push('<blockquote>');
+          inBlockquote = true;
+        }
+        const bqContent = applyInlineFormatting(blockquoteMatch[1]);
+        processed.push(bqContent || '<br>');
+        continue;
+      } else if (inBlockquote && line.trim() !== '') {
+        // Non-blockquote, non-empty line ends the blockquote
+        closeBlockquoteIfOpen();
+      }
+
       // Check for list items
       const unorderedMatch = line.match(/^\s*[\*\-]\s+(.+)$/);
       const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
 
       if (unorderedMatch || orderedMatch) {
+        closeBlockquoteIfOpen();
         let content = unorderedMatch ? unorderedMatch[1] : orderedMatch[1];
         const currentListType = unorderedMatch ? 'ul' : 'ol';
 
@@ -183,40 +232,39 @@ class Utils {
         processed.push(`<li>${content}</li>`);
         continue;
       } else if (inList) {
-        processed.push(`</${listType}>`);
-        inList = false;
-        listType = null;
+        closeListIfOpen();
       }
 
       // Headers
       if (line.startsWith('### ')) {
+        closeBlockquoteIfOpen();
         processed.push(`<h3>${applyInlineFormatting(line.substring(4))}</h3>`);
         continue;
       } else if (line.startsWith('## ')) {
+        closeBlockquoteIfOpen();
         processed.push(`<h2>${applyInlineFormatting(line.substring(3))}</h2>`);
         continue;
       } else if (line.startsWith('# ')) {
+        closeBlockquoteIfOpen();
         processed.push(`<h1>${applyInlineFormatting(line.substring(2))}</h1>`);
         continue;
       }
 
-      // Inline formatting (bold, italic, code)
+      // Inline formatting (bold, italic, code, links, strikethrough)
       line = applyInlineFormatting(line);
 
       // Empty lines become <br>
       if (line.trim() === '') {
+        closeBlockquoteIfOpen();
         processed.push('<br>');
       } else {
         processed.push(line);
       }
     }
 
-    // Close any open lists
-    if (inList) {
-      processed.push(`</${listType}>`);
-    }
-
-    // Close any open code blocks
+    // Close any open structures
+    closeListIfOpen();
+    closeBlockquoteIfOpen();
     if (inCodeBlock) {
       processed.push('</code></pre>');
     }

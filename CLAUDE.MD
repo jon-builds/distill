@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Distill is a Chrome Manifest V3 extension that extracts transcripts from YouTube videos and optionally processes them using OpenAI or Claude AI with custom prompts.
 
-**Current Version:** 4.3.5
-**Branch Strategy:** `main` is the stable branch (contains v4.3.5). All PRs should target `main`. Create feature branches from `main`.
+**Current Version:** 4.3.6
+**Branch Strategy:** `main` is the stable branch (contains v4.3.6). All PRs should target `main`. Create feature branches from `main`.
 
 ## Development Workflow
 
@@ -469,7 +469,13 @@ v4.0 uses `MutationObserver` via `waitForElement(selector, timeout)` to detect D
 
 ## Version History
 
-**v4.3.5** (2026-04-15) - Current
+**v4.3.6** (2026-04-15) - Current
+- **AI summary headings render as headings**: Default prompt emitted `**KEY TAKEAWAYS**` (bold) instead of `## KEY TAKEAWAYS` (heading), so the renderer correctly produced `<strong>` — but sections looked like flat bold text. Updated `DEFAULT_PROMPT` in `settings.js` to use `## ` headings. Existing users' saved `customPrompt` left untouched (respects customization).
+- **Markdown renderer extended**: Added links (`[text](url)` → `<a target="_blank" rel="noopener noreferrer">`), blockquotes (`> `), strikethrough (`~~text~~` → `<del>`), and horizontal rules (`---`/`***`/`___`) to `Utils.markdownToHtml()` in `utils.js`. Reordered inline formatting: code → links → bold → italic → strikethrough so URLs containing `*` or `_` don't get mangled.
+- **Matching CSS**: Added `.yte-summary-text` and `.yte-chat-bubble-assistant` rules for the new tags in `modal-styles.css`, wired to existing Apple-HIG theme variables.
+- Copy-to-clipboard inherits the fix automatically — `_copyToClipboard('summary')` runs the same `markdownToHtml` before calling `copyRichText()`, so pasted content now carries headings/links/blockquotes into Notion/Docs.
+
+**v4.3.5** (2026-04-15)
 - **Segment text wrapper class fix**: YouTube migrated the per-segment text wrapper from `.yt-core-attributed-string` to `.ytAttributedStringHost`. Without this fix, panel opens correctly but the extraction loop's text selectors find nothing → "Transcript panel found but could not extract text" error.
 - Prepended `.ytAttributedStringHost` and `span[role="text"]` to `SEGMENT_TEXT` in `constants.js`. Older selectors retained as fallback.
 
@@ -635,7 +641,7 @@ No planned changes at this time.
 ## Git Workflow
 
 **Branches:**
-- `main` - Stable branch (contains v4.3.5). Default branch on GitHub.
+- `main` - Stable branch (contains v4.3.6). Default branch on GitHub.
 - `v2.0`, `v3.0` - Version branches (merged into main)
 - `v2.0-feature-expansion`, `v3-enhancements` - Feature branches (archived)
 - `v1.1-timestamp` - Old stable branch name (replaced by main, can be deleted)
@@ -671,4 +677,4 @@ No planned changes at this time.
 ---
 
 **Last Updated:** 2026-04-15
-**Current Version:** 4.3.5
+**Current Version:** 4.3.6

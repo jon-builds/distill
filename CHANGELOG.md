@@ -5,6 +5,21 @@ All notable changes to Distill (YouTube Transcript Extractor) will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.6] - 2026-04-15
+
+### Fixed
+- AI summary section titles ("KEY TAKEAWAYS", "BREAKDOWN", "NOTABLE") rendered as plain bold inline text instead of styled headings. The renderer and CSS already supported `<h1>`/`<h2>`/`<h3>`, but the default prompt instructed the model to emit `**BOLD**` rather than `## HEADING`. Updated `DEFAULT_PROMPT` in `settings.js` to use real markdown headings.
+- Existing users keep their saved `customPrompt` untouched — only new users or "Reset to default" pick up the new format.
+
+### Added
+- `markdownToHtml()` now supports four previously-missing features so model output no longer leaks raw markdown into the UI:
+  - Links: `[text](url)` → `<a href target="_blank" rel="noopener noreferrer">`
+  - Blockquotes: lines starting with `>`
+  - Strikethrough: `~~text~~` → `<del>`
+  - Horizontal rules: `---` / `***` / `___`
+- Inline regex order reworked so inline code and links are processed before bold/italic, preventing URL mangling.
+- CSS styling for the new tags in both `.yte-summary-text` (summary tab) and `.yte-chat-bubble-assistant` (chat replies), keyed off the existing Apple-HIG theme variables.
+
 ## [4.3.5] - 2026-04-15
 
 ### Fixed
